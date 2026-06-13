@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: "Release tag, for example v0.2.1"
+        description: "Release tag, for example v0.3.0"
         required: true
-        default: "v0.2.1"
+        default: "v0.3.0"
       prerelease:
         description: "Mark as prerelease"
         required: true
@@ -37,9 +37,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Prepare icon
+        run: |
+          python tools/write_icon.py
+
       - name: Build EXE
         run: |
-          pyinstaller --noconfirm --onefile --windowed --name MHW_Save_Guard mhw_save_guard.py
+          pyinstaller --noconfirm --onefile --windowed --name MHW_Save_Guard --icon assets/app_icon.ico --add-data "assets/app_icon.ico;assets" mhw_save_guard.py
 
       - name: Prepare release package
         shell: pwsh
