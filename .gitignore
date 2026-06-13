@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+.venv/
+venv/
+env/
+
+# PyInstaller
+build/
+dist/
+*.spec
+
+# Tool runtime data
+mhw_save_guard_config.json
+mhw_save_guard_state.json
+avatar_cache/
+backups/
+
+# OS
+.DS_Store
+Thumbs.db
