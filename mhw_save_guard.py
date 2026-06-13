@@ -23,9 +23,10 @@ from datetime import datetime
 from pathlib import Path
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
+from tkinter import font as tkfont
 
 APP_NAME = "MHWSaveGuard"
-APP_VERSION = "0.2.1"
+APP_VERSION = "0.2.2"
 APPID = "582010"
 GAME_EXE = "MonsterHunterWorld.exe"
 STEAMID64_BASE = 76561197960265728
@@ -46,6 +47,18 @@ def fmt_time(ts: float) -> str:
     return datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M:%S")
 
 
+def fmt_time_short(ts: float) -> str:
+    return datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M")
+
+
+def fmt_size(size: int) -> str:
+    if size >= 1024 * 1024:
+        return f"{size / 1024 / 1024:.2f} MB"
+    if size >= 1024:
+        return f"{size / 1024:.1f} KB"
+    return f"{size} B"
+
+
 def sha256(path: Path) -> str:
     h = hashlib.sha256()
     with path.open("rb") as f:
@@ -58,7 +71,14 @@ def file_brief(path: Path) -> str:
     if not path.exists():
         return "不存在"
     st = path.stat()
-    return f"{fmt_time(st.st_mtime)} / {st.st_size:,} bytes / sha256={sha256(path)[:12]}..."
+    return f"{fmt_time(st.st_mtime)} / {fmt_size(st.st_size)} / sha256={sha256(path)[:12]}..."
+
+
+def file_table_brief(path: Path) -> str:
+    if not path.exists():
+        return "不存在"
+    st = path.stat()
+    return f"{fmt_time_short(st.st_mtime)} / {fmt_size(st.st_size)}"
 
 
 def read_json(path: Path, default):
@@ -188,28 +208,6 @@ def fetch_steam_profile(steamid64: str) -> tuple[str, str]:
         return f"读取失败: {exc}", ""
 
 
-def char_candidates(save_path: Path) -> str:
-    if not save_path.exists():
-        return ""
-    try:
-        raw = save_path.read_bytes()
-    except Exception:
-        return ""
-    found: list[str] = []
-    for enc in ("utf-16le", "utf-8"):
-        try:
-            text = raw.decode(enc, errors="ignore")
-            for m in re.finditer(r"[\u3040-\u30ff\u3400-\u9fffA-Za-z0-9_\- ]{3,16}", text):
-                item = m.group(0).strip()
-                if item and item not in found:
-                    found.append(item)
-                if len(found) >= 4:
-                    return ", ".join(found)
-        except Exception:
-            pass
-    return ", ".join(found)
-
-
 class SaveGuard:
     def __init__(self, log_func):
         self.log = log_func
@@ -274,8 +272,8 @@ class App(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title(f"{APP_NAME} v{APP_VERSION}")
-        self.geometry("1120x740")
-        self.minsize(980, 620)
+        self.geometry("1280x760")
+        self.minsize(1120, 660)
 
         self.config_path = tool_dir() / CONFIG_NAME
         self.cfg = read_json(self.config_path, {})
@@ -290,6 +288,7 @@ class App(tk.Tk):
         self.users: dict[str, dict[str, str]] = {}
 
         self._init_vars()
+        self._setup_style()
         self._build_ui()
         self.after(200, self._pump)
         self.after(500, self.initial_autodetect)
@@ -307,6 +306,18 @@ class App(tk.Tk):
         self.rollback_guard_var = tk.BooleanVar(value=bool(self.cfg.get("rollback_guard", True)))
         self.sync_while_running_var = tk.BooleanVar(value=bool(self.cfg.get("sync_while_running", False)))
         self.online_profiles_var = tk.BooleanVar(value=bool(self.cfg.get("online_profiles", True)))
+
+    def _setup_style(self):
+        self.option_add("*Font", ("Microsoft YaHei UI", 10))
+        style = ttk.Style(self)
+        try:
+            style.theme_use("vista")
+        except Exception:
+            pass
+        style.configure("Treeview", font=("Microsoft YaHei UI", 10), rowheight=28)
+        style.configure("Treeview.Heading", font=("Microsoft YaHei UI", 10, "bold"))
+        style.configure("TNotebook.Tab", font=("Microsoft YaHei UI", 10))
+        self.title_font = tkfont.Font(family="Microsoft YaHei UI", size=22, weight="bold")
 
     def save_config(self):
         data = {
@@ -331,7 +342,7 @@ class App(tk.Tk):
 
         header = ttk.Frame(root)
         header.pack(fill="x")
-        ttk.Label(header, text=APP_NAME, font=("Microsoft YaHei UI", 20, "bold")).pack(side="left")
+        ttk.Label(header, text=APP_NAME, font=self.title_font).pack(side="left")
         self.monitor_label = ttk.Label(header, text="监控未启动", foreground="#a33")
         self.monitor_label.pack(side="right")
 
@@ -382,25 +393,37 @@ class App(tk.Tk):
         ttk.Button(top, text="联网刷新 Steam 昵称", command=self.refresh_profiles).pack(side="left", padx=(0, 8))
         ttk.Checkbutton(top, text="允许联网读取公开 Steam 资料", variable=self.online_profiles_var).pack(side="left")
 
-        cols = ("account", "steamid64", "name", "state", "has", "char", "mtime")
-        self.user_tree = ttk.Treeview(self.tab_user, columns=cols, show="headings", height=16)
+        table_frame = ttk.Frame(self.tab_user)
+        table_frame.pack(fill="both", expand=True)
+
+        cols = ("account", "steamid64", "name", "state", "has", "mtime", "path")
+        self.user_tree = ttk.Treeview(table_frame, columns=cols, show="headings", height=16)
         headings = [
-            ("account", "AccountID", 100),
-            ("steamid64", "SteamID64", 150),
-            ("name", "Steam昵称", 180),
-            ("state", "状态", 80),
-            ("has", "MHW存档", 70),
-            ("char", "角色名候选", 180),
-            ("mtime", "remote修改时间/大小", 280),
+            ("account", "AccountID", 115),
+            ("steamid64", "SteamID64", 165),
+            ("name", "Steam昵称", 220),
+            ("state", "状态", 90),
+            ("has", "MHW存档", 80),
+            ("mtime", "remote修改时间/大小", 220),
+            ("path", "remote路径", 460),
         ]
         for key, title, width in headings:
             self.user_tree.heading(key, text=title)
-            self.user_tree.column(key, width=width, stretch=key in {"name", "char", "mtime"})
-        self.user_tree.pack(fill="both", expand=True)
+            self.user_tree.column(key, width=width, minwidth=width, stretch=False, anchor="w")
+
+        yscroll = ttk.Scrollbar(table_frame, orient="vertical", command=self.user_tree.yview)
+        xscroll = ttk.Scrollbar(table_frame, orient="horizontal", command=self.user_tree.xview)
+        self.user_tree.configure(yscrollcommand=yscroll.set, xscrollcommand=xscroll.set)
+        self.user_tree.grid(row=0, column=0, sticky="nsew")
+        yscroll.grid(row=0, column=1, sticky="ns")
+        xscroll.grid(row=1, column=0, sticky="ew")
+        table_frame.rowconfigure(0, weight=1)
+        table_frame.columnconfigure(0, weight=1)
+
         self.user_tree.bind("<<TreeviewSelect>>", self.select_user)
         ttk.Label(
             self.tab_user,
-            text="角色名候选只是从二进制存档中扫描出的可打印字符串，不用于自动选择。",
+            text="已隐藏角色名候选扫描：MHW 存档是二进制文件，强行扫描容易出现乱码。请按 Steam昵称 / AccountID / 修改时间判断。",
             foreground="#666",
         ).pack(anchor="w", pady=(8, 0))
 
@@ -432,7 +455,7 @@ class App(tk.Tk):
         box = ttk.LabelFrame(self.tab_guard, text="当前状态", padding=8)
         box.grid(row=3, column=0, columnspan=3, sticky="nsew")
         self.tab_guard.rowconfigure(3, weight=1)
-        self.status_text = tk.Text(box, height=16, wrap="word")
+        self.status_text = tk.Text(box, height=16, wrap="word", font=("Consolas", 10))
         self.status_text.pack(fill="both", expand=True)
         self.status_text.configure(state="disabled")
 
@@ -441,7 +464,7 @@ class App(tk.Tk):
         row.pack(fill="x", pady=(0, 8))
         ttk.Button(row, text="清空日志", command=lambda: self.log_text.delete("1.0", "end")).pack(side="left", padx=(0, 8))
         ttk.Button(row, text="打开工具目录", command=lambda: os.startfile(tool_dir())).pack(side="left")
-        self.log_text = tk.Text(self.tab_log, wrap="word")
+        self.log_text = tk.Text(self.tab_log, wrap="word", font=("Microsoft YaHei UI", 10))
         self.log_text.pack(fill="both", expand=True)
         self.log(f"{APP_NAME} v{APP_VERSION} 已启动，工具目录: {tool_dir()}")
 
@@ -506,14 +529,13 @@ class App(tk.Tk):
             steamid64 = account_to_steamid64(account)
             remote = user_dir / APPID / "remote" / "SAVEDATA1000"
             has = remote.exists()
-            info = file_brief(remote) if has else "不存在"
-            candidate = char_candidates(remote) if has else ""
+            info = file_table_brief(remote) if has else "不存在"
             self.users[account] = {"steamid64": steamid64, "remote": str(remote)}
             self.user_tree.insert(
                 "",
                 "end",
                 iid=account,
-                values=(account, steamid64, "未联网读取", "", "有" if has else "无", candidate, info),
+                values=(account, steamid64, "未联网读取", "", "有" if has else "无", info, str(remote)),
             )
         self.log(f"已扫描 userdata: {len(self.users)} 个目录")
 
@@ -686,9 +708,7 @@ class App(tk.Tk):
 
 def main():
     try:
-        # On Windows this improves scaling on high-DPI screens. It is ignored elsewhere.
         import ctypes
-
         ctypes.windll.shcore.SetProcessDpiAwareness(1)
     except Exception:
         pass
