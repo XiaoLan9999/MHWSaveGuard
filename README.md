@@ -13,7 +13,8 @@ This tool protects that workflow with a safer GUI, automatic snapshots, and roll
 - Full GUI workflow, no `1/2/3/4` console menu.
 - Choose Steam root and auto-detect *Monster Hunter: World*.
 - Scan `Steam\userdata` and select the correct user.
-- Optional online lookup of public Steam avatar/name through Steam Community XML.
+- Optional online lookup of public Steam name/status through Steam Community XML.
+- Shows cautious MHW character-name candidates scanned from printable strings in `SAVEDATA1000`.
 - Monitor `MonsterHunterWorld.exe`.
 - **Every time the game closes**, create a timestamped backup under the tool directory:
   - `backups/<timestamp>_game_closed/SAVEDATA1000_from_game_savedata_backup`
@@ -89,7 +90,7 @@ When you close the game, the tool creates a local backup under `backups` and syn
 
 ## Notes about “character info”
 
-MHW’s `SAVEDATA1000` is a binary save. This tool shows cautious “character name candidates” scanned from printable strings, but it does **not** rely on them for automatic selection. Select by Steam avatar/name, AccountID, and save modified time.
+MHW’s `SAVEDATA1000` is a binary save. This tool shows cautious “character name candidates” scanned from printable strings, but it does **not** rely on them for automatic selection. Select by Steam name/status, AccountID, and save modified time.
 
 ## Safety
 
