@@ -1,5 +1,7 @@
 # MHWSaveGuard
 
+English | [简体中文](README.zh-CN.md)
+
 **MHWSaveGuard** is a Windows GUI utility for *Monster Hunter: World* players who hit the weird “Failed to save game” problem where:
 
 - `Monster Hunter World\savedata_backup\SAVEDATA1000` updates correctly.
