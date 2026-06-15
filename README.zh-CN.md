@@ -33,43 +33,6 @@
 
 这是针对某些 MHW / Steam 存档链路异常的临时解决方案。它不是游戏 Mod，不修改游戏内存，也不会改变玩法。它只是在创建备份后复制存档文件。
 
-## 快速开始
-
-### 从源码运行
-
-1. 安装 Python 3.10 或更新版本。
-2. 安装依赖：
-
-```powershell
-pip install -r requirements.txt
-```
-
-3. 运行：
-
-```powershell
-python mhw_save_guard.py
-```
-
-也可以直接双击：
-
-```text
-run_gui.bat
-```
-
-### 本地打包 EXE
-
-双击：
-
-```text
-build_exe.bat
-```
-
-生成的可执行文件会出现在：
-
-```text
-dist\MHW_Save_Guard.exe
-```
-
 ## 推荐使用方式
 
 1. 打开工具。
