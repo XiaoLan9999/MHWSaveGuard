@@ -33,43 +33,6 @@ This tool protects that workflow with a safer GUI, automatic snapshots, and roll
 
 This is a workaround for a specific MHW/Steam save issue. It does not modify game memory and it is not a gameplay mod. It simply copies save files after creating backups.
 
-## Quick start
-
-### Run from source
-
-1. Install Python 3.10+.
-2. Install dependencies:
-
-```powershell
-pip install -r requirements.txt
-```
-
-3. Run:
-
-```powershell
-python mhw_save_guard.py
-```
-
-Or double-click:
-
-```text
-run_gui.bat
-```
-
-### Build EXE locally
-
-Double-click:
-
-```text
-build_exe.bat
-```
-
-The executable will appear at:
-
-```text
-dist\MHW_Save_Guard.exe
-```
-
 ## Recommended usage
 
 1. Open the tool.
